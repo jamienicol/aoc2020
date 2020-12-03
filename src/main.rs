@@ -18,7 +18,7 @@ fn day_1() -> Result<i32> {
     let entries = entries?;
     println!("{:?}", entries);
 
-    for combination in entries.into_iter().combinations(2) {
+    for combination in entries.into_iter().combinations(3) {
         println!("{:?}", combination);
         let sum: i32 = combination.iter().sum();
         if sum == 2020 {
