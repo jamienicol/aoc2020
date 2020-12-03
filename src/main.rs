@@ -1,11 +1,13 @@
 use anyhow::Result;
+use itertools::Itertools;
 use thiserror::Error;
+
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 
 #[derive(Error, Debug)]
 enum AocError {
-    #[error("No two entries exist with a sum of 2020")]
+    #[error("No n entries exist with a sum of 2020")]
     BadEntries,
 }
 
@@ -16,12 +18,11 @@ fn day_1() -> Result<i32> {
     let entries = entries?;
     println!("{:?}", entries);
 
-    for (i, entry_a) in entries[..entries.len() - 1].iter().enumerate() {
-        for entry_b in &entries[i + 1..] {
-            println!("entry_a: {}, entry_b: {}", entry_a, entry_b);
-            if entry_a + entry_b == 2020 {
-                return Ok(entry_a * entry_b);
-            }
+    for combination in entries.into_iter().combinations(2) {
+        println!("{:?}", combination);
+        let sum: i32 = combination.iter().sum();
+        if sum == 2020 {
+            return Ok(combination.iter().product());
         }
     }
 
