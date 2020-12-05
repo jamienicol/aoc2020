@@ -125,9 +125,41 @@ fn day_2() -> Result<()> {
     Ok(())
 }
 
+fn day_3() -> Result<()> {
+    let input = std::fs::read_to_string("res/day_3_input")?;
+
+    let map_height = input.lines().count();
+    let map_width = input.lines().nth(0).unwrap().chars().count();
+
+    let map = input
+        .lines()
+        .flat_map(|l| l.chars())
+        .map(|c| match c {
+            '.' => Ok(false),
+            '#' => Ok(true),
+            char => Err(anyhow!("Unexpected input {:?} in tree map", char)),
+        })
+        .collect::<Result<Vec<bool>>>()?;
+    assert_eq!(map_width * map_height, map.len(), "Unexpected size of tree map");
+
+    let mut x = 3;
+    let mut tree_count = 0;
+    for y in 1..map_height {
+        if map[x + y * map_width] {
+            tree_count = tree_count + 1;
+        }
+        x = (x + 3) % map_width;
+    }
+
+    println!("Day 3, part 1: {}", tree_count);
+
+    Ok(())
+}
+
 fn main() -> Result<()> {
     // day_1()?;
-    day_2()?;
+    // day_2()?;
+    day_3()?;
 
     Ok(())
 }
