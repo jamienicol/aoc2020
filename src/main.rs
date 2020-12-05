@@ -125,6 +125,20 @@ fn day_2() -> Result<()> {
     Ok(())
 }
 
+fn num_trees_encountered(map: &[bool], map_size: (usize, usize), slope: (usize, usize)) -> usize {
+    let mut x = 0;
+    let mut tree_count = 0;
+
+    for y in (slope.1..map_size.1).step_by(slope.1) {
+        x = (x + slope.0) % map_size.0;
+        if map[x + y * map_size.0] {
+            tree_count = tree_count + 1;
+        }
+    }
+
+    tree_count
+}
+
 fn day_3() -> Result<()> {
     let input = std::fs::read_to_string("res/day_3_input")?;
 
@@ -142,16 +156,22 @@ fn day_3() -> Result<()> {
         .collect::<Result<Vec<bool>>>()?;
     assert_eq!(map_width * map_height, map.len(), "Unexpected size of tree map");
 
-    let mut x = 3;
-    let mut tree_count = 0;
-    for y in 1..map_height {
-        if map[x + y * map_width] {
-            tree_count = tree_count + 1;
-        }
-        x = (x + 3) % map_width;
-    }
-
+    let tree_count = num_trees_encountered(&map, (map_width, map_height), (3, 1));
     println!("Day 3, part 1: {}", tree_count);
+
+    let slopes = [
+        (1, 1),
+        (3, 1),
+        (5, 1),
+        (7, 1),
+        (1, 2),
+    ];
+    let product: usize = slopes
+        .iter()
+        .map(|slope| num_trees_encountered(&map, (map_width, map_height), *slope))
+        .product();
+
+    println!("Day 3, part 2: {}", product);
 
     Ok(())
 }
