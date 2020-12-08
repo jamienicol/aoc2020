@@ -3,10 +3,9 @@ use itertools::Itertools;
 use nom::{
     branch::{alt, permutation},
     bytes::complete::{tag, take_till},
-    character::complete::{
-        alpha1, anychar, char, digit1, hex_digit1, multispace0, space1,
-    },
-    combinator::{map_res, opt, verify},
+    character::complete::{alpha1, anychar, char, digit1, hex_digit1, multispace0, space1},
+    combinator::{map, map_res, opt, verify},
+    multi::count,
     sequence::{delimited, pair, preceded, separated_pair},
     IResult,
 };
@@ -342,11 +341,45 @@ fn day_4() -> Result<()> {
     Ok(())
 }
 
+fn parse_seat(input: &str) -> IResult<&str, (u32, u32)> {
+    pair(
+        map_res(
+            count(alt((map(char('F'), |_| '0'), map(char('B'), |_| '1'))), 7),
+            |chars| u32::from_str_radix(&chars.into_iter().collect::<String>(), 2),
+        ),
+        map_res(
+            count(alt((map(char('L'), |_| '0'), map(char('R'), |_| '1'))), 3),
+            |chars| u32::from_str_radix(&chars.into_iter().collect::<String>(), 2),
+        ),
+    )(input)
+}
+
+fn day_5() -> Result<()> {
+    let input = std::fs::read_to_string("res/day_5_input")?;
+
+    let passes = input
+        .lines()
+        .map(|line| Ok(parse_seat(line).map_err(|err| anyhow!("Error parsing seats: {:?}", err))?.1))
+        .collect::<Result<Vec<_>>>()?;
+
+    let max_id = passes
+        .iter()
+        .map(|(row, column)| row * 8 + column)
+        .max()
+        .unwrap();
+
+    // 913
+    println!("Day 5, part 1: {}", max_id);
+
+    Ok(())
+}
+
 fn main() -> Result<()> {
     day_1()?;
     day_2()?;
     day_3()?;
     day_4()?;
+    day_5()?;
 
     Ok(())
 }
