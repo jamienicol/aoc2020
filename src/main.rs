@@ -1,16 +1,16 @@
 use anyhow::{anyhow, Result};
 use itertools::Itertools;
 use nom::{
-    branch::alt,
+    branch::{alt, permutation},
     bytes::complete::{tag, take_till},
-    character::complete::{alpha1, anychar, char, digit1, multispace1, space1},
-    combinator::map_res,
-    multi::separated_list1,
-    sequence::separated_pair,
+    character::complete::{
+        alpha1, anychar, char, digit1, hex_digit1, multispace0, space1,
+    },
+    combinator::{map_res, opt, verify},
+    sequence::{delimited, pair, preceded, separated_pair},
     IResult,
 };
 
-use std::collections::HashSet;
 use std::ops::RangeInclusive;
 
 fn find_product_of_entries_with_sum(entries: &[i32], num_entries: usize, sum: i32) -> Result<i32> {
@@ -179,47 +179,165 @@ fn day_3() -> Result<()> {
     Ok(())
 }
 
-fn parse_passport_1(input: &str) -> IResult<&str, HashSet<&str>> {
-    let (input, fields) = separated_list1(
-        multispace1,
-        alt((
+fn parse_passport_1(input: &str) -> IResult<&str, ()> {
+    let (input, _fields) = permutation((
+        delimited(
+            multispace0,
             separated_pair(tag("byr"), tag(":"), take_till(|c| c == ' ' || c == '\n')),
+            multispace0,
+        ),
+        delimited(
+            multispace0,
             separated_pair(tag("iyr"), tag(":"), take_till(|c| c == ' ' || c == '\n')),
+            multispace0,
+        ),
+        delimited(
+            multispace0,
             separated_pair(tag("eyr"), tag(":"), take_till(|c| c == ' ' || c == '\n')),
+            multispace0,
+        ),
+        delimited(
+            multispace0,
             separated_pair(tag("hgt"), tag(":"), take_till(|c| c == ' ' || c == '\n')),
+            multispace0,
+        ),
+        delimited(
+            multispace0,
             separated_pair(tag("hcl"), tag(":"), take_till(|c| c == ' ' || c == '\n')),
+            multispace0,
+        ),
+        delimited(
+            multispace0,
             separated_pair(tag("ecl"), tag(":"), take_till(|c| c == ' ' || c == '\n')),
+            multispace0,
+        ),
+        delimited(
+            multispace0,
             separated_pair(tag("pid"), tag(":"), take_till(|c| c == ' ' || c == '\n')),
+            multispace0,
+        ),
+        opt(delimited(
+            multispace0,
             separated_pair(tag("cid"), tag(":"), take_till(|c| c == ' ' || c == '\n')),
+            multispace0,
         )),
-    )(input)?;
+    ))(input)?;
 
-    let mut passport = HashSet::default();
-    for (field, _value) in fields {
-        passport.insert(field);
-    }
+    Ok((input, ()))
+}
 
-    Ok((input, passport))
+fn parse_passport_2(input: &str) -> IResult<&str, ()> {
+    let (input, _fields) = permutation((
+        delimited(
+            multispace0,
+            preceded(
+                tag("byr:"),
+                verify(map_res(digit1, str::parse::<i32>), |byr| {
+                    *byr >= 1920 && *byr <= 2002
+                }),
+            ),
+            multispace0,
+        ),
+        delimited(
+            multispace0,
+            preceded(
+                tag("iyr:"),
+                verify(map_res(digit1, str::parse::<i32>), |iyr| {
+                    *iyr >= 2010 && *iyr <= 2020
+                }),
+            ),
+            multispace0,
+        ),
+        delimited(
+            multispace0,
+            preceded(
+                tag("eyr:"),
+                verify(map_res(digit1, str::parse::<i32>), |eyr| {
+                    *eyr >= 2020 && *eyr <= 2030
+                }),
+            ),
+            multispace0,
+        ),
+        delimited(
+            multispace0,
+            preceded(
+                tag("hgt:"),
+                verify(
+                    pair(
+                        map_res(digit1, str::parse::<i32>),
+                        alt((tag("cm"), tag("in"))),
+                    ),
+                    |(hgt, unit)| match *unit {
+                        "cm" => *hgt >= 150 && *hgt <= 193,
+                        "in" => *hgt >= 59 && *hgt <= 76,
+                        _ => unreachable!(),
+                    },
+                ),
+            ),
+            multispace0,
+        ),
+        delimited(
+            multispace0,
+            preceded(tag("hcl:"), preceded(tag("#"), hex_digit1)),
+            multispace0,
+        ),
+        delimited(
+            multispace0,
+            preceded(
+                tag("ecl:"),
+                alt((
+                    tag("amb"),
+                    tag("blu"),
+                    tag("brn"),
+                    tag("gry"),
+                    tag("grn"),
+                    tag("hzl"),
+                    tag("oth"),
+                )),
+            ),
+            multispace0,
+        ),
+        delimited(
+            multispace0,
+            preceded(
+                tag("pid:"),
+                verify(digit1, |pid: &str| pid.chars().count() == 9),
+            ),
+            multispace0,
+        ),
+        opt(delimited(
+            multispace0,
+            preceded(tag("cid:"), digit1),
+            multispace0,
+        )),
+    ))(input)?;
+
+    Ok((input, ()))
 }
 
 fn day_4() -> Result<()> {
     let input = std::fs::read_to_string("res/day_4_input")?;
 
-    const REQUIRED_FIELDS: [&'static str; 7] = ["byr", "iyr", "eyr", "hgt", "hcl", "ecl", "pid"];
-
-    let num_valid = input
+    let num_valid_1 = input
         .split("\n\n")
         .map(|input| {
             parse_passport_1(input).map_err(|err| anyhow!("Error parsing passport: {:?}", err))
         })
-        .flatten()
-        .map(|(_input, passport)| {
-            REQUIRED_FIELDS.iter().all(|field| passport.contains(field)) as usize
+        .filter_map(Result::ok)
+        .count();
+
+    let num_valid_2 = input
+        .split("\n\n")
+        .map(|input| {
+            parse_passport_2(input).map_err(|err| anyhow!("Error parsing passport: {:?}", err))
         })
-        .sum::<usize>();
+        .filter_map(Result::ok)
+        .count();
 
     // 196
-    println!("Day 4, part 1: {}", num_valid);
+    println!("Day 4, part 1: {}", num_valid_1);
+    // 114
+    println!("Day 4, part 2: {}", num_valid_2);
 
     Ok(())
 }
