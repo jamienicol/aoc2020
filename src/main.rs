@@ -2,15 +2,15 @@ use anyhow::{anyhow, Result};
 use itertools::Itertools;
 use nom::{
     branch::{alt, permutation},
-    bytes::complete::{tag, take_till},
+    bytes::complete::{tag, take_till, take_until},
     character::complete::{alpha1, anychar, char, digit1, hex_digit1, multispace0, space1},
     combinator::{map, map_res, opt, verify},
-    multi::count,
-    sequence::{delimited, pair, preceded, separated_pair},
+    multi::{count, separated_list1},
+    sequence::{delimited, pair, preceded, separated_pair, terminated},
     IResult,
 };
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::ops::RangeInclusive;
 
 fn find_product_of_entries_with_sum(entries: &[i32], num_entries: usize, sum: i32) -> Result<i32> {
@@ -438,6 +438,79 @@ fn day_6() -> Result<()> {
     Ok(())
 }
 
+fn parse_bag(input: &str) -> IResult<&str, String> {
+    map(
+        terminated(take_until(" bag"), alt((tag(" bags"), tag(" bag")))),
+        str::to_string,
+    )(input)
+}
+
+fn parse_bag_rule(input: &str) -> IResult<&str, (String, Vec<(usize, String)>)> {
+    let (input, subject) = parse_bag(input)?;
+    let (input, _) = tag(" contain ")(input)?;
+
+    let (input, can_contain) = alt((
+        map(tag("no other bags"), |_| Vec::default()),
+        separated_list1(
+            tag(", "),
+            separated_pair(map_res(digit1, str::parse::<usize>), space1, parse_bag),
+        ),
+    ))(input)?;
+
+    Ok((input, (subject, can_contain)))
+}
+
+fn bag_can_contain(
+    bag: &str,
+    can_contain: &str,
+    rules: &HashMap<String, Vec<(usize, String)>>,
+) -> bool {
+    for (_, colour) in &rules[bag] {
+        if colour == can_contain {
+            return true;
+        } else {
+            if bag_can_contain(&colour, can_contain, rules) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+fn num_bags_contained(bag: &str, rules: &HashMap<String, Vec<(usize, String)>>) -> usize {
+    rules[bag]
+        .iter()
+        .map(|(count, bag)| count * (num_bags_contained(bag, rules) + 1))
+        .sum()
+}
+
+fn day_7() -> Result<()> {
+    let input = std::fs::read_to_string("res/day_7_input")?;
+
+    let rules = input
+        .lines()
+        .map(|line| {
+            Ok(parse_bag_rule(line)
+                .map_err(|err| anyhow!("Error parsing bag rule: {:?}", err))?
+                .1)
+        })
+        .collect::<Result<HashMap<String, Vec<(usize, String)>>>>()?;
+
+    let can_contain_shiny_gold = rules
+        .keys()
+        .filter(|bag| bag_can_contain(bag, "shiny gold", &rules))
+        .count();
+    // 45
+    println!("Day 7, part 1: {}", can_contain_shiny_gold);
+
+    let shiny_gold_contains = num_bags_contained("shiny gold", &rules);
+    // 7867
+    println!("Day 7, part 2: {}", shiny_gold_contains);
+
+    Ok(())
+}
+
 fn main() -> Result<()> {
     day_1()?;
     day_2()?;
@@ -445,6 +518,7 @@ fn main() -> Result<()> {
     day_4()?;
     day_5()?;
     day_6()?;
+    day_7()?;
 
     Ok(())
 }
