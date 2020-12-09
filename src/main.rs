@@ -10,6 +10,7 @@ use nom::{
     IResult,
 };
 
+use std::collections::HashSet;
 use std::ops::RangeInclusive;
 
 fn find_product_of_entries_with_sum(entries: &[i32], num_entries: usize, sum: i32) -> Result<i32> {
@@ -341,17 +342,21 @@ fn day_4() -> Result<()> {
     Ok(())
 }
 
-fn parse_seat(input: &str) -> IResult<&str, (u32, u32)> {
+fn parse_seat(input: &str) -> IResult<&str, (i32, i32)> {
     pair(
         map_res(
             count(alt((map(char('F'), |_| '0'), map(char('B'), |_| '1'))), 7),
-            |chars| u32::from_str_radix(&chars.into_iter().collect::<String>(), 2),
+            |chars| i32::from_str_radix(&chars.into_iter().collect::<String>(), 2),
         ),
         map_res(
             count(alt((map(char('L'), |_| '0'), map(char('R'), |_| '1'))), 3),
-            |chars| u32::from_str_radix(&chars.into_iter().collect::<String>(), 2),
+            |chars| i32::from_str_radix(&chars.into_iter().collect::<String>(), 2),
         ),
     )(input)
+}
+
+fn seat_id(row: i32, column: i32) -> i32 {
+    row * 8 + column
 }
 
 fn day_5() -> Result<()> {
@@ -359,17 +364,43 @@ fn day_5() -> Result<()> {
 
     let passes = input
         .lines()
-        .map(|line| Ok(parse_seat(line).map_err(|err| anyhow!("Error parsing seats: {:?}", err))?.1))
+        .map(|line| {
+            Ok(parse_seat(line)
+                .map_err(|err| anyhow!("Error parsing seats: {:?}", err))?
+                .1)
+        })
         .collect::<Result<Vec<_>>>()?;
 
-    let max_id = passes
+    let pass_ids = passes
         .iter()
-        .map(|(row, column)| row * 8 + column)
-        .max()
-        .unwrap();
+        .map(|(row, column)| seat_id(*row, *column))
+        .collect::<Vec<_>>();
+
+    let max_id = pass_ids.iter().max().unwrap();
 
     // 913
     println!("Day 5, part 1: {}", max_id);
+
+    let all_seats = (0..2i32.pow(7))
+        .flat_map(move |row| (0..2i32.pow(3)).map(move |column| (row, column)))
+        .collect::<HashSet<(i32, i32)>>();
+
+    let mut empty_seats = all_seats.clone();
+    for pass in passes {
+        empty_seats.remove(&pass);
+    }
+
+    let my_seat = empty_seats
+        .iter()
+        .find(|(row, column)| {
+            let id = seat_id(*row, *column);
+            pass_ids.contains(&(id - 1)) && pass_ids.contains(&(id + 1))
+        })
+        .ok_or_else(|| anyhow!("Couldn't find my seat"))?;
+    let my_seat_id = seat_id(my_seat.0, my_seat.1);
+
+    // 717
+    println!("Day 5, part 2: {}", my_seat_id);
 
     Ok(())
 }
