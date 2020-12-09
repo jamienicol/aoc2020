@@ -405,12 +405,46 @@ fn day_5() -> Result<()> {
     Ok(())
 }
 
+fn day_6() -> Result<()> {
+    let input = std::fs::read_to_string("res/day_6_input")?;
+
+    let any_yes = input
+        .split("\n\n")
+        .map(|group| {
+            group
+                .lines()
+                .flat_map(|person| person.chars())
+                .unique()
+                .count()
+        })
+        .sum::<usize>();
+
+    let all_yes = input
+        .split("\n\n")
+        .map(|group| {
+            group
+                .lines()
+                .flat_map(|person| person.chars())
+                .unique()
+                .filter(|answer| group.lines().all(|line| line.contains(*answer)))
+                .count()
+        })
+        .sum::<usize>();
+    // 6335
+    println!("Day 6, part 1: {}", any_yes);
+    // 3392
+    println!("Day 6, part 2: {}", all_yes);
+
+    Ok(())
+}
+
 fn main() -> Result<()> {
     day_1()?;
     day_2()?;
     day_3()?;
     day_4()?;
     day_5()?;
+    day_6()?;
 
     Ok(())
 }
