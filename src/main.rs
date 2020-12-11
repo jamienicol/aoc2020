@@ -511,14 +511,86 @@ fn day_7() -> Result<()> {
     Ok(())
 }
 
+#[derive(Debug)]
+enum Instruction {
+    Nop(i32),
+    Acc(i32),
+    Jmp(i32),
+}
+
+fn parse_instruction(input: &str) -> IResult<&str, Instruction> {
+    let (input, op) = alt((
+        tag("nop "),
+        tag("acc "),
+        tag("jmp "),
+    ))(input)?;
+
+    let (input, sign) = alt((
+        map(tag("+"), |_| 1),
+        map(tag("-"), |_| -1)
+    ))(input)?;
+
+    let (input, val) = map_res(digit1, str::parse::<i32>)(input)?;
+
+    let instruction = match op {
+        "nop " => Instruction::Nop(sign * val),
+        "acc " => Instruction::Acc(sign * val),
+        "jmp " => Instruction::Jmp(sign * val),
+        _ => panic!("Unrecognized op"),
+    };
+
+    Ok((input, instruction))
+}
+
+fn day_8() -> Result<()> {
+    let input = std::fs::read_to_string("res/day_8_input")?;
+    let instructions = input
+        .lines()
+        .map(|line| {
+            Ok(parse_instruction(line)
+            .map_err(|err| anyhow!("Error parsing instruction: {:?}", err))?
+            .1)
+    })
+    .collect::<Result<Vec<Instruction>>>()?;
+
+    let mut visited = vec![false; instructions.len()];
+
+    let mut pc = 0;
+    let mut acc = 0;
+    while visited[pc] == false {
+        visited[pc] = true;
+        match instructions[pc] {
+            Instruction::Nop => {
+                pc += 1
+            }
+            Instruction::Acc(val) => {
+                pc += 1;
+                acc += val;
+            }
+            Instruction::Jmp(val) => {
+                pc = (pc as i32 + val) as usize;
+            }
+        }
+    }
+
+    // 1446
+    println!("Day 8, part 1: {}", acc);
+
+    Ok(())
+}
+
 fn main() -> Result<()> {
-    day_1()?;
-    day_2()?;
-    day_3()?;
-    day_4()?;
-    day_5()?;
-    day_6()?;
-    day_7()?;
+    if false {
+        day_1()?;
+        day_2()?;
+        day_3()?;
+        day_4()?;
+        day_5()?;
+        day_6()?;
+        day_7()?;
+    }
+
+    day_8()?;
 
     Ok(())
 }
