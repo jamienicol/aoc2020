@@ -511,7 +511,7 @@ fn day_7() -> Result<()> {
     Ok(())
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum Instruction {
     Nop(i32),
     Acc(i32),
@@ -519,16 +519,9 @@ enum Instruction {
 }
 
 fn parse_instruction(input: &str) -> IResult<&str, Instruction> {
-    let (input, op) = alt((
-        tag("nop "),
-        tag("acc "),
-        tag("jmp "),
-    ))(input)?;
+    let (input, op) = alt((tag("nop "), tag("acc "), tag("jmp ")))(input)?;
 
-    let (input, sign) = alt((
-        map(tag("+"), |_| 1),
-        map(tag("-"), |_| -1)
-    ))(input)?;
+    let (input, sign) = alt((map(tag("+"), |_| 1), map(tag("-"), |_| -1)))(input)?;
 
     let (input, val) = map_res(digit1, str::parse::<i32>)(input)?;
 
@@ -542,27 +535,27 @@ fn parse_instruction(input: &str) -> IResult<&str, Instruction> {
     Ok((input, instruction))
 }
 
-fn day_8() -> Result<()> {
-    let input = std::fs::read_to_string("res/day_8_input")?;
-    let instructions = input
-        .lines()
-        .map(|line| {
-            Ok(parse_instruction(line)
-            .map_err(|err| anyhow!("Error parsing instruction: {:?}", err))?
-            .1)
-    })
-    .collect::<Result<Vec<Instruction>>>()?;
+enum ProgramResult {
+    Terminated(i32),
+    InfiniteLoop(i32),
+}
 
+fn run_program(instructions: &[Instruction]) -> ProgramResult {
     let mut visited = vec![false; instructions.len()];
-
     let mut pc = 0;
     let mut acc = 0;
-    while visited[pc] == false {
+
+    loop {
+        if pc >= instructions.len() {
+            return ProgramResult::Terminated(acc);
+        }
+        if visited[pc] {
+            return ProgramResult::InfiniteLoop(acc);
+        }
+
         visited[pc] = true;
         match instructions[pc] {
-            Instruction::Nop => {
-                pc += 1
-            }
+            Instruction::Nop(_) => pc += 1,
             Instruction::Acc(val) => {
                 pc += 1;
                 acc += val;
@@ -572,9 +565,50 @@ fn day_8() -> Result<()> {
             }
         }
     }
+}
 
+fn day_8() -> Result<()> {
+    let input = std::fs::read_to_string("res/day_8_input")?;
+    let instructions = input
+        .lines()
+        .map(|line| {
+            Ok(parse_instruction(line)
+                .map_err(|err| anyhow!("Error parsing instruction: {:?}", err))?
+                .1)
+        })
+        .collect::<Result<Vec<Instruction>>>()?;
+
+    let acc_at_repeat = match run_program(&instructions) {
+        ProgramResult::InfiniteLoop(acc) => Ok(acc),
+        _ => Err(anyhow!("Program not expected to terminate")),
+    }?;
     // 1446
-    println!("Day 8, part 1: {}", acc);
+    println!("Day 8, part 1: {}", acc_at_repeat);
+
+    let mut acc_at_term = Err(anyhow!("No modified program terminated"));
+    for i in 0..instructions.len() {
+        let modified_instructions = match instructions[i] {
+            Instruction::Nop(val) => {
+                let mut modified_instructions = instructions.clone();
+                modified_instructions[i] = Instruction::Jmp(val);
+                modified_instructions
+            }
+            Instruction::Jmp(val) => {
+                let mut modified_instructions = instructions.clone();
+                modified_instructions[i] = Instruction::Nop(val);
+                modified_instructions
+            }
+            Instruction::Acc(_) => continue,
+        };
+
+        if let ProgramResult::Terminated(val) = run_program(&modified_instructions) {
+            acc_at_term = Ok(val);
+            break;
+        }
+    }
+    let acc_at_term = acc_at_term?;
+    // 1403
+    println!("Day 8, part 2: {}", acc_at_term);
 
     Ok(())
 }
