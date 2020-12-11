@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use itertools::Itertools;
 use nom::{
     branch::{alt, permutation},
@@ -613,6 +613,35 @@ fn day_8() -> Result<()> {
     Ok(())
 }
 
+fn day_9() -> Result<()> {
+    let input = std::fs::read_to_string("res/day_9_input")?;
+    let numbers = input
+        .lines()
+        .map(|line| {
+            line.parse::<u64>()
+                .with_context(|| format!("Error parsing line {:?}", line))
+        })
+        .collect::<Result<Vec<u64>>>()?;
+
+    let res = (25..numbers.len())
+        .find(|i| {
+            numbers[i - 25..*i]
+                .iter()
+                .combinations(2)
+                .map(|pair| pair.into_iter().sum::<u64>())
+                .find(|sum| *sum == numbers[*i])
+                .is_none()
+        })
+        .ok_or_else(|| {
+            anyhow!("No number found which doesn't equal sum of two of the previous 25 numbers")
+        })?;
+
+    // 167829540
+    println!("Day 9, part 1: {}", numbers[res]);
+
+    Ok(())
+}
+
 fn main() -> Result<()> {
     if false {
         day_1()?;
@@ -622,9 +651,10 @@ fn main() -> Result<()> {
         day_5()?;
         day_6()?;
         day_7()?;
+        day_8()?;
     }
 
-    day_8()?;
+    day_9()?;
 
     Ok(())
 }
