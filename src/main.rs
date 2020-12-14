@@ -639,6 +639,27 @@ fn day_9() -> Result<()> {
     // 167829540
     println!("Day 9, part 1: {}", numbers[res]);
 
+    fn find_contiguous_sum(numbers: &[u64], target_sum: u64) -> Result<&[u64]> {
+        for i in 0..numbers.len() - 1 {
+            for j in i + 2..numbers.len() + 1 {
+                match numbers[i..j].iter().sum::<u64>() {
+                    current_sum if current_sum > target_sum => break,
+                    current_sum if current_sum == target_sum => {
+                        return Ok(&numbers[i..j]);
+                    }
+                    _ => continue,
+                }
+            }
+        }
+
+        Err(anyhow!("Failed to find contiguous range that sums to {}", target_sum))
+    }
+
+    let range = find_contiguous_sum(&numbers, numbers[res])?;
+    let res2 = range.iter().min().unwrap() + range.iter().max().unwrap();
+    // 28045630
+    println!("Day 9, part 2: {}", res2);
+
     Ok(())
 }
 
