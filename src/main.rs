@@ -663,6 +663,75 @@ fn day_9() -> Result<()> {
     Ok(())
 }
 
+fn day_10() -> Result<()> {
+    let input = std::fs::read_to_string("res/day_10_input")?;
+    let mut adaptors = input
+        .lines()
+        .map(|line| {
+            line.parse::<u64>()
+                .with_context(|| format!("Error parsing line {:?}", line))
+        })
+        .collect::<Result<Vec<u64>>>()?;
+
+    // Add 0 jolt for the plug
+    adaptors.push(0);
+
+    adaptors.sort_unstable();
+
+    // Add max + 3 jolt for my device
+    adaptors.push(adaptors.last().unwrap() + 3);
+
+    let (num_1_jolt_diffs, num_3_jolt_diffs) = adaptors
+        .iter()
+        .tuple_windows()
+        .fold((0, 0), |(mut num_1_jolt_diffs, mut num_3_jolt_diffs), (i, j)| {
+            if j - i == 1 {
+                num_1_jolt_diffs += 1;
+            } else if j - i == 3 {
+                num_3_jolt_diffs += 1;
+            }
+
+            (num_1_jolt_diffs, num_3_jolt_diffs)
+        });
+
+    let res1 = num_1_jolt_diffs * num_3_jolt_diffs;
+    // 1625
+    println!("Day 10, part 1: {}", res1);
+
+    // The joltage between each adapter either increases by 1 or 3 jolts.
+    // If it increases by 3, there is only 1 adaptor that can be used between the two joltages.
+    // If the joltage increases by 1 for a consecutive series of adaptors, there are multiple
+    // "paths" from the start joltage to the end joltage.
+    // First, split the adaptors in to groups where the joltage consecutively increases by 1,
+    // and find the length of each of those groups.
+    let run_lengths = adaptors.iter().tuple_windows()
+        .group_by(|(prev, current)| **current == **prev + 1)
+        .into_iter()
+        .filter_map(|(key, group)| {
+            match key {
+                true => Some(group.count() + 1),
+                false => None,
+            }
+        })
+        .collect::<Vec<usize>>();
+
+    // Calculate the number of paths through each of those groups, then the total
+    // number of paths from the plug to device is the product of each of those.
+    let num_paths = run_lengths.iter().map(|length| match length {
+        1 => 1,
+        2 => 1,
+        3 => 2,
+        4 => 4,
+        5 => 7,
+        _ => unreachable!(),
+    }).product::<usize>();
+
+    // 3100448333024
+    println!("Day 10, part 2: {}", num_paths);
+
+    Ok(())
+}
+
 fn main() -> Result<()> {
     if false {
         day_1()?;
@@ -673,9 +742,10 @@ fn main() -> Result<()> {
         day_6()?;
         day_7()?;
         day_8()?;
+        day_9()?;
     }
 
-    day_9()?;
+    day_10()?;
 
     Ok(())
 }
