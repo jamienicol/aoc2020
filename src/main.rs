@@ -732,6 +732,103 @@ fn day_10() -> Result<()> {
     Ok(())
 }
 
+#[derive(PartialEq)]
+struct WaitingRoom {
+    seats: Vec<Seat>,
+    width: usize,
+    height: usize,
+}
+
+impl WaitingRoom {
+    fn next(&self) -> WaitingRoom {
+        let seats = self.seats.iter().enumerate().map(|(i, seat)| {
+            let x = i % self.width;
+            let y = i / self.width;
+
+            match seat {
+                Seat::Floor => Seat::Floor,
+                Seat::Empty => if self.adjacent_seats(x, y).any(|seat| matches!(seat, Seat::Occupied)) {
+                    Seat::Empty
+                } else {
+                    Seat::Occupied
+                }
+                Seat::Occupied => if self.adjacent_seats(x, y).filter(|seat| matches!(seat, Seat::Occupied)).count() >= 4 {
+                    Seat::Empty
+                } else {
+                    Seat::Occupied
+                }
+            }
+        })
+        .collect::<Vec<Seat>>();
+
+        WaitingRoom {
+            seats,
+            width: self.width,
+            height: self.height,
+        }
+    }
+
+    fn adjacent_seats<'a>(&'a self, x: usize, y: usize) -> impl Iterator<Item = Seat> + 'a {
+        (x.max(1) - 1..=(x + 1).min(self.width - 1))
+            .flat_map(move |row| (y.max(1) - 1..=(y + 1).min(self.height - 1)).map(move |column| (row, column)))
+            .filter(move |pos| *pos != (x, y))
+            .map(move |(x, y)| {
+                self.seats[x + y * self.width]
+            })
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+enum Seat {
+    Floor,
+    Empty,
+    Occupied,
+}
+
+fn day_11() -> Result<()> {
+    let input = std::fs::read_to_string("res/day_11_input")?;
+
+    let height = input.lines().count();
+    let width = input.lines().nth(0).unwrap().chars().count();
+
+    let seats = input
+        .lines()
+        .flat_map(|l| l.chars())
+        .map(|c| match c {
+            '.' => Ok(Seat::Floor),
+            'L' => Ok(Seat::Empty),
+            '#' => Ok(Seat::Occupied),
+            char => Err(anyhow!("Unexpected input {:?} in waiting room seats", char)),
+        })
+        .collect::<Result<Vec<Seat>>>()?;
+    assert_eq!(
+        width * height,
+        seats.len(),
+        "Unexpected size of waiting room seats"
+    );
+
+    let mut waiting_room = WaitingRoom {
+        seats,
+        width,
+        height,
+    };
+
+    let occupied = loop {
+        let next = waiting_room.next();
+        let prev = std::mem::replace(&mut waiting_room, next);
+
+        if prev == waiting_room {
+            let occupied = waiting_room.seats.iter().filter(|seat| matches!(seat, Seat::Occupied)).count();
+            break occupied;
+        }
+    };
+
+    // 2386
+    println!("Day 11, part 1: {}", occupied);
+
+    Ok(())
+}
+
 fn main() -> Result<()> {
     if false {
         day_1()?;
@@ -743,9 +840,10 @@ fn main() -> Result<()> {
         day_7()?;
         day_8()?;
         day_9()?;
+        day_10()?;
     }
 
-    day_10()?;
+    day_11()?;
 
     Ok(())
 }
