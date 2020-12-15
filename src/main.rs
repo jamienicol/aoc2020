@@ -652,7 +652,10 @@ fn day_9() -> Result<()> {
             }
         }
 
-        Err(anyhow!("Failed to find contiguous range that sums to {}", target_sum))
+        Err(anyhow!(
+            "Failed to find contiguous range that sums to {}",
+            target_sum
+        ))
     }
 
     let range = find_contiguous_sum(&numbers, numbers[res])?;
@@ -681,10 +684,9 @@ fn day_10() -> Result<()> {
     // Add max + 3 jolt for my device
     adaptors.push(adaptors.last().unwrap() + 3);
 
-    let (num_1_jolt_diffs, num_3_jolt_diffs) = adaptors
-        .iter()
-        .tuple_windows()
-        .fold((0, 0), |(mut num_1_jolt_diffs, mut num_3_jolt_diffs), (i, j)| {
+    let (num_1_jolt_diffs, num_3_jolt_diffs) = adaptors.iter().tuple_windows().fold(
+        (0, 0),
+        |(mut num_1_jolt_diffs, mut num_3_jolt_diffs), (i, j)| {
             if j - i == 1 {
                 num_1_jolt_diffs += 1;
             } else if j - i == 3 {
@@ -692,7 +694,8 @@ fn day_10() -> Result<()> {
             }
 
             (num_1_jolt_diffs, num_3_jolt_diffs)
-        });
+        },
+    );
 
     let res1 = num_1_jolt_diffs * num_3_jolt_diffs;
     // 1625
@@ -704,27 +707,30 @@ fn day_10() -> Result<()> {
     // "paths" from the start joltage to the end joltage.
     // First, split the adaptors in to groups where the joltage consecutively increases by 1,
     // and find the length of each of those groups.
-    let run_lengths = adaptors.iter().tuple_windows()
+    let run_lengths = adaptors
+        .iter()
+        .tuple_windows()
         .group_by(|(prev, current)| **current == **prev + 1)
         .into_iter()
-        .filter_map(|(key, group)| {
-            match key {
-                true => Some(group.count() + 1),
-                false => None,
-            }
+        .filter_map(|(key, group)| match key {
+            true => Some(group.count() + 1),
+            false => None,
         })
         .collect::<Vec<usize>>();
 
     // Calculate the number of paths through each of those groups, then the total
     // number of paths from the plug to device is the product of each of those.
-    let num_paths = run_lengths.iter().map(|length| match length {
-        1 => 1,
-        2 => 1,
-        3 => 2,
-        4 => 4,
-        5 => 7,
-        _ => unreachable!(),
-    }).product::<usize>();
+    let num_paths = run_lengths
+        .iter()
+        .map(|length| match length {
+            1 => 1,
+            2 => 1,
+            3 => 2,
+            4 => 4,
+            5 => 7,
+            _ => unreachable!(),
+        })
+        .product::<usize>();
 
     // 3100448333024
     println!("Day 10, part 2: {}", num_paths);
@@ -741,25 +747,41 @@ struct WaitingRoom {
 
 impl WaitingRoom {
     fn next(&self) -> WaitingRoom {
-        let seats = self.seats.iter().enumerate().map(|(i, seat)| {
-            let x = i % self.width;
-            let y = i / self.width;
+        let seats = self
+            .seats
+            .iter()
+            .enumerate()
+            .map(|(i, seat)| {
+                let x = i % self.width;
+                let y = i / self.width;
 
-            match seat {
-                Seat::Floor => Seat::Floor,
-                Seat::Empty => if self.adjacent_seats(x, y).any(|seat| matches!(seat, Seat::Occupied)) {
-                    Seat::Empty
-                } else {
-                    Seat::Occupied
+                match seat {
+                    Seat::Floor => Seat::Floor,
+                    Seat::Empty => {
+                        if self
+                            .adjacent_seats(x, y)
+                            .any(|seat| matches!(seat, Seat::Occupied))
+                        {
+                            Seat::Empty
+                        } else {
+                            Seat::Occupied
+                        }
+                    }
+                    Seat::Occupied => {
+                        if self
+                            .adjacent_seats(x, y)
+                            .filter(|seat| matches!(seat, Seat::Occupied))
+                            .count()
+                            >= 4
+                        {
+                            Seat::Empty
+                        } else {
+                            Seat::Occupied
+                        }
+                    }
                 }
-                Seat::Occupied => if self.adjacent_seats(x, y).filter(|seat| matches!(seat, Seat::Occupied)).count() >= 4 {
-                    Seat::Empty
-                } else {
-                    Seat::Occupied
-                }
-            }
-        })
-        .collect::<Vec<Seat>>();
+            })
+            .collect::<Vec<Seat>>();
 
         WaitingRoom {
             seats,
@@ -770,11 +792,11 @@ impl WaitingRoom {
 
     fn adjacent_seats<'a>(&'a self, x: usize, y: usize) -> impl Iterator<Item = Seat> + 'a {
         (x.max(1) - 1..=(x + 1).min(self.width - 1))
-            .flat_map(move |row| (y.max(1) - 1..=(y + 1).min(self.height - 1)).map(move |column| (row, column)))
-            .filter(move |pos| *pos != (x, y))
-            .map(move |(x, y)| {
-                self.seats[x + y * self.width]
+            .flat_map(move |row| {
+                (y.max(1) - 1..=(y + 1).min(self.height - 1)).map(move |column| (row, column))
             })
+            .filter(move |pos| *pos != (x, y))
+            .map(move |(x, y)| self.seats[x + y * self.width])
     }
 }
 
@@ -818,7 +840,11 @@ fn day_11() -> Result<()> {
         let prev = std::mem::replace(&mut waiting_room, next);
 
         if prev == waiting_room {
-            let occupied = waiting_room.seats.iter().filter(|seat| matches!(seat, Seat::Occupied)).count();
+            let occupied = waiting_room
+                .seats
+                .iter()
+                .filter(|seat| matches!(seat, Seat::Occupied))
+                .count();
             break occupied;
         }
     };
