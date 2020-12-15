@@ -137,7 +137,7 @@ fn num_trees_encountered(map: &[bool], map_size: (usize, usize), slope: (usize, 
     for y in (slope.1..map_size.1).step_by(slope.1) {
         x = (x + slope.0) % map_size.0;
         if map[x + y * map_size.0] {
-            tree_count = tree_count + 1;
+            tree_count += 1;
         }
     }
 
@@ -148,7 +148,7 @@ fn day_3() -> Result<()> {
     let input = std::fs::read_to_string("res/day_3_input")?;
 
     let map_height = input.lines().count();
-    let map_width = input.lines().nth(0).unwrap().chars().count();
+    let map_width = input.lines().next().unwrap().chars().count();
 
     let map = input
         .lines()
@@ -385,7 +385,7 @@ fn day_5() -> Result<()> {
         .flat_map(move |row| (0..2i32.pow(3)).map(move |column| (row, column)))
         .collect::<HashSet<(i32, i32)>>();
 
-    let mut empty_seats = all_seats.clone();
+    let mut empty_seats = all_seats;
     for pass in passes {
         empty_seats.remove(&pass);
     }
@@ -445,6 +445,7 @@ fn parse_bag(input: &str) -> IResult<&str, String> {
     )(input)
 }
 
+#[allow(clippy::type_complexity)]
 fn parse_bag_rule(input: &str) -> IResult<&str, (String, Vec<(usize, String)>)> {
     let (input, subject) = parse_bag(input)?;
     let (input, _) = tag(" contain ")(input)?;
@@ -466,16 +467,12 @@ fn bag_can_contain(
     rules: &HashMap<String, Vec<(usize, String)>>,
 ) -> bool {
     for (_, colour) in &rules[bag] {
-        if colour == can_contain {
+        if colour == can_contain || bag_can_contain(&colour, can_contain, rules) {
             return true;
-        } else {
-            if bag_can_contain(&colour, can_contain, rules) {
-                return true;
-            }
         }
     }
 
-    return false;
+    false
 }
 
 fn num_bags_contained(bag: &str, rules: &HashMap<String, Vec<(usize, String)>>) -> usize {
@@ -811,7 +808,7 @@ fn day_11() -> Result<()> {
     let input = std::fs::read_to_string("res/day_11_input")?;
 
     let height = input.lines().count();
-    let width = input.lines().nth(0).unwrap().chars().count();
+    let width = input.lines().next().unwrap().chars().count();
 
     let seats = input
         .lines()
